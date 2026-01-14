@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>數獨生成器</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -13,16 +13,16 @@
     <header>
         <div class="header-left">
             <button class="menu-btn" id="menuBtn">☰</button>
-            <div class="seed-display">
-                <span>種子碼:</span>
-                <span id="currentSeed" style="font-family: monospace; font-weight: bold;">-</span>
-                <button class="seed-btn" id="inputSeedBtn">輸入</button>
+            <div class="seed-display" id="seedDisplayBox">
+                <span class="seed-label">種子碼:</span>
+                <span id="currentSeed">-</span>
             </div>
+            <button class="seed-btn" id="inputSeedBtn">輸入</button>
         </div>
+        
         <div class="header-center" id="difficultyDisplay">
             難易度: 中等
         </div>
-        <div style="width: 40px;"></div>
     </header>
 
     <div class="sidebar" id="sidebar">
@@ -244,12 +244,31 @@
             for(let i=0; i<seedBase.length; i++) seedInt += seedBase.charCodeAt(i);
             rand = mulberry32(seedInt); 
 
-            // Logic: keep full string
             currentSeedString = `${currentSize}-${currentDifficulty}-${seedBase}`;
             
-            // Visual: Highlight random part in red
-            const visualHTML = `${currentSize}-${currentDifficulty}-<span style="color: red; font-weight: bold;">${seedBase}</span>`;
-            document.getElementById('currentSeed').innerHTML = visualHTML;
+            // --- 這裡就是紅字處理的核心邏輯 ---
+            const container = document.getElementById('seedDisplayBox');
+            // 清空舊內容
+            container.innerHTML = '';
+            
+            // 1. 建立「種子碼:」標籤 (手機版會隱藏)
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'seed-label';
+            labelSpan.textContent = '種子碼:';
+            container.appendChild(labelSpan);
+
+            // 2. 建立「前綴」 (如 9-medium-) (手機版會變淡變小)
+            const prefixSpan = document.createElement('span');
+            prefixSpan.className = 'seed-prefix';
+            prefixSpan.textContent = `${currentSize}-${currentDifficulty}-`;
+            container.appendChild(prefixSpan);
+
+            // 3. 建立「紅字」 (亂數部分)
+            const seedSpan = document.createElement('span');
+            seedSpan.className = 'red-text';
+            seedSpan.textContent = seedBase;
+            container.appendChild(seedSpan);
+            // -----------------------------
             
             const diffText = { 'easy': '簡單', 'medium': '中等', 'hard': '困難' };
             document.getElementById('difficultyDisplay').textContent = `尺寸: ${currentSize}x${currentSize} | 難易度: ${diffText[currentDifficulty]}`;
@@ -378,6 +397,7 @@
 
         document.getElementById('toggleAnswerBtn').addEventListener('click', toggleAnswer);
 
+        // 初始化遊戲
         generateGame();
 
     </script>
