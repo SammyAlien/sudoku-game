@@ -55,7 +55,7 @@ header {
     color: #333; 
     display: flex;
     align-items: center;
-    gap: 5px; /* 元素間距 */
+    gap: 5px; 
     background: #f0f0f0;
     padding: 6px 12px;
     border-radius: 12px;
@@ -64,14 +64,14 @@ header {
     justify-content: center;
 }
 
-/* 這是關鍵：強制紅色字體樣式 */
+/* 強制紅色字體樣式 */
 .red-text {
-    color: #e60000 !important; /* 強制紅色 */
+    color: #e60000 !important; 
     font-weight: 800;
     font-family: monospace;
 }
 
-/* 這是前面的尺寸與難度 (9-medium-) */
+/* 前綴 (如 9-medium-) */
 .seed-prefix {
     color: #666;
     font-size: 13px;
@@ -319,18 +319,29 @@ header {
     gap: 10px;
 }
 
-/* --- Grids --- */
+/* --- Grids (修正重點) --- */
+
+/* 9x9 */
 .grid-9 { grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); }
 .grid-9 .cell:nth-child(3n) { border-right: var(--thick-border); }
 .grid-9 .cell:nth-child(9n) { border-right: var(--thin-border); } 
 .grid-9 .cell:nth-child(n+19):nth-child(-n+27),
 .grid-9 .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: var(--thick-border); }
 
+/* 6x6: 修正為 2列 x 3行 (共6格) 的區塊 */
 .grid-6 { grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(6, 1fr); }
+/* 垂直線：每 3 格畫一條粗線 (第3, 6欄) */
 .grid-6 .cell:nth-child(3n) { border-right: var(--thick-border); }
-.grid-6 .cell:nth-child(6n) { border-right: var(--thin-border); }
-.grid-6 .cell:nth-child(n+13):nth-child(-n+18) { border-bottom: var(--thick-border); }
+.grid-6 .cell:nth-child(6n) { border-right: var(--thin-border); } /* 最右邊不畫 */
 
+/* 水平線：第 2 列 (7-12) 和 第 4 列 (19-24) 下方畫粗線 */
+/* 這樣每區塊高度為 2 格 */
+.grid-6 .cell:nth-child(n+7):nth-child(-n+12),
+.grid-6 .cell:nth-child(n+19):nth-child(-n+24) { 
+    border-bottom: var(--thick-border); 
+}
+
+/* 4x4 */
 .grid-4 { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); }
 .grid-4 .cell:nth-child(2n) { border-right: var(--thick-border); }
 .grid-4 .cell:nth-child(4n) { border-right: var(--thin-border); }
@@ -339,22 +350,14 @@ header {
 /* --- Mobile Fixes --- */
 @media (max-width: 480px) {
     .header-center { display: none; }
-    
-    /* 1. 隱藏「種子碼:」中文標籤 */
     .seed-label { display: none; }
-    
-    /* 2. 縮小前面的前綴 (如 9-medium-) */
     .seed-prefix { font-size: 12px; color: #999; }
-
-    /* 3. 放大後面的紅字，讓它成為視覺焦點 */
     .red-text { font-size: 16px; }
-
     .seed-display {
         flex: 1;
         margin: 0 5px;
         text-align: center;
         padding: 6px 4px;
-        /* 讓內容緊湊排列 */
         gap: 0; 
     }
 }
