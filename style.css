@@ -1,0 +1,372 @@
+:root {
+    --primary-color: #333;
+    --accent-color: #007bff;
+    --bg-color: #f4f4f4;
+    --board-bg: #fff;
+    --border-color: #ccc;
+    --thick-border: 2px solid #000;
+    --thin-border: 1px solid #ccc;
+    --cell-size: 40px; /* 桌面版預設大小 */
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* 佔滿視窗高度 */
+    overflow: hidden; /* 防止整體捲動 */
+}
+
+/* --- Header / Top Bar --- */
+header {
+    background-color: #fff;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    position: relative;
+    z-index: 10;
+    flex-wrap: wrap; /* 允許手機版換行 */
+    gap: 10px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.menu-btn {
+    font-size: 24px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 5px;
+    touch-action: manipulation; /* 優化觸控 */
+}
+
+.seed-display {
+    font-size: 13px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+#currentSeed {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.seed-btn {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.header-center {
+    font-weight: bold;
+    font-size: 16px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* --- Sidebar (Menu) --- */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 260px;
+    height: 100%;
+    background: #fff;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    padding-top: 60px;
+    transform: translateX(0);
+}
+
+.sidebar.active {
+    transform: translateX(280px); /* 滑出效果 */
+}
+
+.sidebar-section {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.sidebar h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+    color: var(--primary-color);
+}
+
+.option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.option-btn {
+    padding: 12px; /* 增加觸控範圍 */
+    border: 1px solid #ddd;
+    background: #f9f9f9;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+.option-btn.selected {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    z-index: 90;
+    backdrop-filter: blur(2px); /* 模糊背景增加質感 */
+}
+
+.overlay.active {
+    display: block;
+}
+
+/* --- Main Game Area --- */
+.game-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center; /* 垂直置中 */
+    padding: 10px;
+    overflow-y: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 棋盤容器：改為百分比寬度，適應手機 */
+#sudoku-board {
+    display: grid;
+    background: var(--board-bg);
+    border: var(--thick-border);
+    margin-bottom: 20px;
+    width: 100%; 
+    max-width: 500px; /* 限制最大寬度，避免在平板過大 */
+    aspect-ratio: 1 / 1; /* 強制保持正方形 */
+}
+
+.cell {
+    position: relative;
+    border: var(--thin-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    text-align: center;
+    box-sizing: border-box; 
+    /* 移除固定寬高，改由 Grid 控制 */
+    width: auto;
+    height: auto;
+}
+
+/* 輸入框優化 */
+.cell input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    text-align: center;
+    /* 動態字體大小：在手機上稍微縮小，避免撐破 */
+    font-size: clamp(16px, 4vw, 24px); 
+    color: #333;
+    background: transparent;
+    outline: none;
+    padding: 0;
+    border-radius: 0; /* 修正 iOS 圓角問題 */
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* 移除數字輸入框的上下箭頭 */
+.cell input::-webkit-outer-spin-button,
+.cell input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.cell input[type=number] {
+    -moz-appearance: textfield;
+}
+
+.cell.fixed input {
+    font-weight: bold;
+    color: #000;
+    background-color: #e6e6e6;
+    pointer-events: none; 
+}
+
+.cell.solved input {
+    color: var(--accent-color);
+}
+
+/* --- Footer Controls --- */
+.controls {
+    display: flex;
+    gap: 15px;
+    width: 100%;
+    max-width: 500px;
+    justify-content: space-between;
+}
+
+.action-btn {
+    flex: 1; /* 按鈕平均分配寬度 */
+    padding: 12px 0;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    touch-action: manipulation;
+}
+
+.action-btn:active {
+    transform: scale(0.98);
+}
+
+/* --- Modal --- */
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    z-index: 200;
+    display: none;
+    width: 90%; /* 手機版寬度 */
+    max-width: 320px;
+}
+
+.modal.active {
+    display: block;
+}
+
+.modal h3 { margin-top: 0; }
+.modal input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin: 15px 0;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 16px; 
+}
+
+/* --- Dynamic Grid Borders (Responsive) --- */
+/* 改用 1fr (fraction) 來自動分配空間 */
+
+/* 9x9 */
+.grid-9 { grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); }
+.grid-9 .cell:nth-child(3n) { border-right: var(--thick-border); }
+.grid-9 .cell:nth-child(9n) { border-right: var(--thin-border); } 
+.grid-9 .cell:nth-child(n+19):nth-child(-n+27),
+.grid-9 .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: var(--thick-border); }
+
+/* 6x6 */
+.grid-6 { grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(6, 1fr); }
+.grid-6 .cell:nth-child(3n) { border-right: var(--thick-border); }
+.grid-6 .cell:nth-child(6n) { border-right: var(--thin-border); }
+.grid-6 .cell:nth-child(n+13):nth-child(-n+18) { border-bottom: var(--thick-border); }
+
+/* 4x4 */
+.grid-4 { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); }
+.grid-4 .cell:nth-child(2n) { border-right: var(--thick-border); }
+.grid-4 .cell:nth-child(4n) { border-right: var(--thin-border); }
+.grid-4 .cell:nth-child(n+5):nth-child(-n+8) { border-bottom: var(--thick-border); }
+
+/* --- Media Queries (針對特定裝置微調) --- */
+
+/* 平板 (Tablet) */
+@media (min-width: 768px) {
+    .header-center {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .seed-display {
+        background: transparent;
+        padding: 0;
+    }
+    #currentSeed {
+        max-width: none;
+    }
+}
+
+/* 手機 (Mobile) - 螢幕寬度小於 480px */
+@media (max-width: 480px) {
+    header {
+        padding: 8px 10px;
+    }
+    .header-center {
+        display: none; /* 極小螢幕隱藏難易度文字，避免擁擠 */
+    }
+    .seed-display {
+        flex: 1;
+        justify-content: flex-end;
+    }
+    .game-container {
+        justify-content: start; /* 手機版靠上對齊，避免被虛擬鍵盤擋住 */
+        padding-top: 20px;
+    }
+    /* 調整 9x9 格子內的字體，避免在 iPhone SE 等小手機上過大 */
+    .grid-9 .cell input {
+        font-size: 14px; 
+    }
+}
+
+/* --- Seed Modal Updates (下拉選單樣式) --- */
+.modal select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 16px;
+    background-color: #fff;
+}
+
+.modal label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 14px;
+    color: #555;
+    text-align: left;
+}

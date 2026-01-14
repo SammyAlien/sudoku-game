@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>數獨生成器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="overlay" id="overlay"></div>
+
+    <header>
+        <div class="header-left">
+            <button class="menu-btn" id="menuBtn">☰</button>
+            <div class="seed-display">
+                <span>種子碼:</span>
+                <span id="currentSeed" style="font-family: monospace; font-weight: bold;">-</span>
+                <button class="seed-btn" id="inputSeedBtn">輸入</button>
+            </div>
+        </div>
+        <div class="header-center" id="difficultyDisplay">
+            難易度: 中等
+        </div>
+        <div style="width: 40px;"></div>
+    </header>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-section">
+            <h3>數獨尺寸</h3>
+            <div class="option-group">
+                <button class="option-btn" onclick="changeSize(4)">4 x 4</button>
+                <button class="option-btn" onclick="changeSize(6)">6 x 6</button>
+                <button class="option-btn selected" onclick="changeSize(9)">9 x 9</button>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <h3>難易度</h3>
+            <div class="option-group">
+                <button class="option-btn" onclick="changeDifficulty('easy')">簡單 (Easy)</button>
+                <button class="option-btn selected" onclick="changeDifficulty('medium')">中等 (Medium)</button>
+                <button class="option-btn" onclick="changeDifficulty('hard')">困難 (Hard)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="seedModal">
+        <h3>輸入種子碼復盤</h3>
+        
+        <label for="seedSize">尺寸</label>
+        <select id="seedSize">
+            <option value="4">4 x 4</option>
+            <option value="6">6 x 6</option>
+            <option value="9">9 x 9</option>
+        </select>
+
+        <label for="seedDiff">難易度</label>
+        <select id="seedDiff">
+            <option value="easy">簡單 (Easy)</option>
+            <option value="medium">中等 (Medium)</option>
+            <option value="hard">困難 (Hard)</option>
+        </select>
+
+        <label for="seedInput">種子碼 (亂數部分)</label>
+        <input type="text" id="seedInput" placeholder="例如: 8s9d7f">
+        
+        <div class="modal-buttons">
+            <button class="seed-btn" style="background:#ccc; color:#333" id="cancelSeedBtn">取消</button>
+            <button class="seed-btn" id="confirmSeedBtn">確定</button>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div id="sudoku-board" class="grid-9"></div>
+
+        <div class="controls">
+            <button class="action-btn" id="toggleAnswerBtn">顯示答案</button>
+            <button class="action-btn" style="background-color: #28a745;" onclick="generateGame()">新題目</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game State ---
+        let currentSize = 9;
+        let currentDifficulty = 'medium';
+        let currentBoard = []; 
+        let solutionBoard = []; 
+        let currentSeedString = '';
+        let isShowingAnswer = false;
+
+        function mulberry32(a) {
+            return function() {
+              var t = a += 0x6D2B79F5;
+              t = Math.imul(t ^ (t >>> 15), t | 1);
+              t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+              return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            }
+        }
+        
+        let rand = mulberry32(Date.now()); 
+
+        const sizeConfig = {
+            4: { boxH: 2, boxW: 2 },
+            6: { boxH: 2, boxW: 3 }, 
+            9: { boxH: 3, boxW: 3 }
+        };
+
+        function isValid(board, row, col, num, size) {
+            const config = sizeConfig[size];
+            for (let i = 0; i < size; i++) {
+                if (board[row][i] === num) return false;
+                if (board[i][col] === num) return false;
+            }
+            const startRow = Math.floor(row / config.boxH) * config.boxH;
+            const startCol = Math.floor(col / config.boxW) * config.boxW;
+            for (let i = 0; i < config.boxH; i++) {
+                for (let j = 0; j < config.boxW; j++) {
+                    if (board[startRow + i][startCol + j] === num) return false;
+                }
+            }
+            return true;
+        }
+
+        function fillBoard(board, size) {
+            for (let row = 0; row < size; row++) {
+                for (let col = 0; col < size; col++) {
+                    if (board[row][col] === 0) {
+                        let nums = [];
+                        for(let i=1; i<=size; i++) nums.push(i);
+                        for (let i = nums.length - 1; i > 0; i--) {
+                            const j = Math.floor(rand() * (i + 1));
+                            [nums[i], nums[j]] = [nums[j], nums[i]];
+                        }
+                        for (let num of nums) {
+                            if (isValid(board, row, col, num, size)) {
+                                board[row][col] = num;
+                                if (fillBoard(board, size)) return true;
+                                board[row][col] = 0;
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function createPuzzle(size, difficulty) {
+            let board = Array.from({ length: size }, () => Array(size).fill(0));
+            fillBoard(board, size);
+            solutionBoard = board.map(row => [...row]);
+
+            let attempts = size * size; 
+            if (difficulty === 'easy') attempts = Math.floor(size * size * 0.4);
+            else if (difficulty === 'medium') attempts = Math.floor(size * size * 0.55);
+            else if (difficulty === 'hard') attempts = Math.floor(size * size * 0.70);
+
+            currentBoard = board.map(row => [...row]);
+            
+            while (attempts > 0) {
+                let row = Math.floor(rand() * size);
+                let col = Math.floor(rand() * size);
+                if (currentBoard[row][col] !== 0) {
+                    currentBoard[row][col] = 0;
+                    attempts--;
+                }
+            }
+        }
+
+        function renderBoard() {
+            const boardEl = document.getElementById('sudoku-board');
+            boardEl.innerHTML = '';
+            boardEl.className = `grid-${currentSize}`;
+
+            for (let r = 0; r < currentSize; r++) {
+                for (let c = 0; c < currentSize; c++) {
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = 'cell';
+                    
+                    const val = currentBoard[r][c];
+                    const input = document.createElement('input');
+                    
+                    input.type = 'text';          
+                    input.inputMode = 'numeric';  
+                    input.pattern = '[0-9]*';     
+                    input.maxLength = 1;          
+                    input.autocomplete = "off";   
+                    
+                    input.dataset.row = r;
+                    input.dataset.col = c;
+
+                    if (val !== 0) {
+                        input.value = val;
+                        cellDiv.classList.add('fixed');
+                        input.readOnly = true;
+                        input.tabIndex = -1;
+                    } else {
+                        input.addEventListener('input', (e) => {
+                            let vStr = e.target.value.replace(/[^0-9]/g, '');
+                            if (vStr.length > 1) {
+                                vStr = vStr.slice(-1);
+                            }
+                            e.target.value = vStr;
+                            
+                            const v = parseInt(vStr);
+                            if (isNaN(v) || v < 1 || v > currentSize) {
+                                e.target.value = '';
+                            }
+                        });
+
+                        input.addEventListener('focus', (e) => {
+                            e.target.select();
+                        });
+                    }
+                    cellDiv.appendChild(input);
+                    boardEl.appendChild(cellDiv);
+                }
+            }
+        }
+
+        function generateGame(seedOverride = null) {
+            let seedBase;
+            if (seedOverride) {
+                try {
+                    if (seedOverride.includes('-')) {
+                        const parts = seedOverride.split('-');
+                        if (parts.length !== 3) throw new Error("Format Error");
+                        currentSize = parseInt(parts[0]);
+                        currentDifficulty = parts[1];
+                        seedBase = parts[2];
+                    } else {
+                        seedBase = seedOverride;
+                    }
+                    updateSidebarSelection();
+                } catch (e) {
+                    alert("種子碼格式錯誤！");
+                    return;
+                }
+            } else {
+                seedBase = Math.random().toString(36).substring(2, 10);
+            }
+
+            let seedInt = 0;
+            for(let i=0; i<seedBase.length; i++) seedInt += seedBase.charCodeAt(i);
+            rand = mulberry32(seedInt); 
+
+            // Logic: keep full string
+            currentSeedString = `${currentSize}-${currentDifficulty}-${seedBase}`;
+            
+            // Visual: Highlight random part in red
+            const visualHTML = `${currentSize}-${currentDifficulty}-<span style="color: red; font-weight: bold;">${seedBase}</span>`;
+            document.getElementById('currentSeed').innerHTML = visualHTML;
+            
+            const diffText = { 'easy': '簡單', 'medium': '中等', 'hard': '困難' };
+            document.getElementById('difficultyDisplay').textContent = `尺寸: ${currentSize}x${currentSize} | 難易度: ${diffText[currentDifficulty]}`;
+
+            createPuzzle(currentSize, currentDifficulty);
+
+            isShowingAnswer = false;
+            document.getElementById('toggleAnswerBtn').textContent = "顯示答案";
+            renderBoard();
+        }
+
+        function toggleAnswer() {
+            const inputs = document.querySelectorAll('.cell:not(.fixed) input');
+            isShowingAnswer = !isShowingAnswer;
+            const btn = document.getElementById('toggleAnswerBtn');
+
+            if (isShowingAnswer) {
+                btn.textContent = "隱藏答案";
+                inputs.forEach(input => {
+                    const r = input.dataset.row;
+                    const c = input.dataset.col;
+                    input.value = solutionBoard[r][c];
+                    input.parentElement.classList.add('solved');
+                    input.readOnly = true;
+                });
+            } else {
+                btn.textContent = "顯示答案";
+                inputs.forEach(input => {
+                    input.value = ''; 
+                    input.parentElement.classList.remove('solved');
+                    input.readOnly = false;
+                });
+            }
+        }
+
+        function changeSize(size) {
+            currentSize = size;
+            updateSidebarSelection();
+            closeSidebar();
+            generateGame();
+        }
+
+        function changeDifficulty(diff) {
+            currentDifficulty = diff;
+            updateSidebarSelection();
+            closeSidebar();
+            generateGame();
+        }
+
+        function updateSidebarSelection() {
+            document.querySelectorAll('.sidebar-section .option-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            const sizeBtns = document.querySelectorAll('.sidebar-section:first-child .option-btn');
+            if(currentSize == 4) sizeBtns[0].classList.add('selected');
+            if(currentSize == 6) sizeBtns[1].classList.add('selected');
+            if(currentSize == 9) sizeBtns[2].classList.add('selected');
+
+            const diffBtns = document.querySelectorAll('.sidebar-section:nth-child(2) .option-btn');
+            if(currentDifficulty == 'easy') diffBtns[0].classList.add('selected');
+            if(currentDifficulty == 'medium') diffBtns[1].classList.add('selected');
+            if(currentDifficulty == 'hard') diffBtns[2].classList.add('selected');
+        }
+
+        const overlay = document.getElementById('overlay');
+        const sidebar = document.getElementById('sidebar');
+        const menuBtn = document.getElementById('menuBtn');
+        const seedModal = document.getElementById('seedModal');
+        const inputSeedBtn = document.getElementById('inputSeedBtn');
+        const cancelSeedBtn = document.getElementById('cancelSeedBtn');
+        const confirmSeedBtn = document.getElementById('confirmSeedBtn');
+        const seedInput = document.getElementById('seedInput');
+        
+        const seedSizeSelect = document.getElementById('seedSize');
+        const seedDiffSelect = document.getElementById('seedDiff');
+
+        function openSidebar() {
+            sidebar.classList.add('active');
+            overlay.classList.add('active');
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+        }
+
+        function openSeedModal() {
+            seedModal.classList.add('active');
+            overlay.classList.add('active');
+            seedSizeSelect.value = currentSize;
+            seedDiffSelect.value = currentDifficulty;
+            seedInput.value = '';
+            seedInput.focus();
+        }
+
+        function closeSeedModal() {
+            seedModal.classList.remove('active');
+            overlay.classList.remove('active');
+        }
+
+        menuBtn.addEventListener('click', openSidebar);
+        inputSeedBtn.addEventListener('click', openSeedModal);
+        
+        overlay.addEventListener('click', () => {
+            closeSidebar();
+            closeSeedModal();
+        });
+
+        cancelSeedBtn.addEventListener('click', closeSeedModal);
+        
+        confirmSeedBtn.addEventListener('click', () => {
+            const val = seedInput.value.trim();
+            const selectedSize = seedSizeSelect.value;
+            const selectedDiff = seedDiffSelect.value;
+
+            if (val) {
+                if (val.includes('-')) {
+                    generateGame(val);
+                } else {
+                    const fullSeed = `${selectedSize}-${selectedDiff}-${val}`;
+                    generateGame(fullSeed);
+                }
+                closeSeedModal();
+            }
+        });
+
+        document.getElementById('toggleAnswerBtn').addEventListener('click', toggleAnswer);
+
+        generateGame();
+
+    </script>
+</body>
+</html>
